@@ -197,12 +197,7 @@ func CertificateFromPEM(pems string) (*Certificate, error) {
 	if block == nil || block.Type != "CERTIFICATE" {
 		return nil, errCertificatePEMFormatError
 	}
-	certBytes := make([]byte, base64.StdEncoding.DecodedLen(len(block.Bytes)))
-	n, err := base64.StdEncoding.Decode(certBytes, block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode ceritifcate: %w", err)
-	}
-	cert, err := x509.ParseCertificate(certBytes[:n])
+	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed parsing ceritifcate: %w", err)
 	}
@@ -225,10 +220,7 @@ func CertificateFromPEM(pems string) (*Certificate, error) {
 func (c Certificate) PEM() (string, error) {
 	// First write the X509 certificate
 	var builder strings.Builder
-	xcertBytes := make(
-		[]byte, base64.StdEncoding.EncodedLen(len(c.x509Cert.Raw)))
-	base64.StdEncoding.Encode(xcertBytes, c.x509Cert.Raw)
-	err := pem.Encode(&builder, &pem.Block{Type: "CERTIFICATE", Bytes: xcertBytes})
+	err := pem.Encode(&builder, &pem.Block{Type: "CERTIFICATE", Bytes: c.x509Cert.Raw})
 	if err != nil {
 		return "", fmt.Errorf("failed to pem encode the X certificate: %w", err)
 	}
