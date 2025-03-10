@@ -192,20 +192,22 @@ func (c Certificate) collectStats(report *statsReportCollector) error {
 // CertificateFromPEM creates a fresh certificate based on a string containing
 // pem blocks fort the private key and x509 certificate.
 func CertificateFromPEM(pems string) (*Certificate, error) {
-	var cert *x509.Certificate = nil
-	var privateKey crypto.PrivateKey = nil
-	var err error
+	var cert *x509.Certificate
+	var privateKey crypto.PrivateKey
 
 	var block *pem.Block
 	more := []byte(pems)
 	for {
+		var err error
 		block, more = pem.Decode(more)
-		if block == nil { break }
+		if block == nil {
+			break
+		}
 
 		// decode & parse the certificate
 		if block.Type == "CERTIFICATE" {
 			if cert != nil {
-				return nil, fmt.Errorf("failed parsing certificate, more than 1 CERTIFICATE block in pems")
+				return nil, errCertificatePEMMultipleCert
 			}
 			cert, err = x509.ParseCertificate(block.Bytes)
 
@@ -220,7 +222,7 @@ func CertificateFromPEM(pems string) (*Certificate, error) {
 			}
 		} else if block.Type == "PRIVATE KEY" {
 			if privateKey != nil {
-				return nil, fmt.Errorf("failed parsing certificate, more than 1 PRIVATE KEY block in pems")
+				return nil, errCertificatePEMMultiplePriv
 			}
 			privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
 		}
@@ -232,7 +234,7 @@ func CertificateFromPEM(pems string) (*Certificate, error) {
 	}
 
 	if cert == nil || privateKey == nil {
-		return nil, fmt.Errorf("failed parsing certificate, pems must contain both a CERTIFICATE block and a PRIVATE KEY block")
+		return nil, errCertificatePEMMissing
 	}
 
 	ret := CertificateFromX509(privateKey, cert)
